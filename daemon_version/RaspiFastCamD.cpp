@@ -593,8 +593,9 @@ int RaspiFastCamClass::run()
    }
    else
    {
-       // TODO: replace with CLASS_CALLBACK_DATA
-      PORT_USERDATA callback_data;
+      CLASS_CALLBACK_DATA callback_data;
+      callback_data.instance = this;
+      PORT_USERDATA user_callback_data;
 
       if (state.verbose)
          fprintf(stderr, "Starting component connection stage\n");
@@ -626,9 +627,9 @@ int RaspiFastCamClass::run()
 
          // Set up our userdata - this is passed though to the callback where we need the information.
          // Null until we open our filename
-         callback_data.file_handle = NULL;
-         callback_data.pstate = &state;
-         vcos_status = vcos_semaphore_create(&callback_data.complete_semaphore, "RaspiFastCamD-sem", 0);
+         user_callback_data.file_handle = NULL;
+         user_callback_data.pstate = &state;
+         vcos_status = vcos_semaphore_create(&user_callback_data.complete_semaphore, "RaspiFastCamD-sem", 0);
 
          vcos_assert(vcos_status == VCOS_SUCCESS);
 
@@ -636,7 +637,7 @@ int RaspiFastCamClass::run()
 
          vcos_assert(vcos_status == VCOS_SUCCESS);
 
-         // TODO: replace with CLASS_CALLBACK_DATA
+         callback_data.callbackUserData = (void *)&user_callback_data;
 		 encoder_output_port->userdata = (struct MMAL_PORT_USERDATA_T *)&callback_data;
 
          if (state.verbose)
