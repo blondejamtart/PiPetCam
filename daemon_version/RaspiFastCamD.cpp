@@ -803,6 +803,11 @@ error:
    return 0;
 }
 
+RaspiFastCamClass::RaspiFastCamClass(RASPISTILL_STATE state)
+{
+    this->state = state;
+}
+
 /**
  * main
  */
@@ -811,6 +816,7 @@ int main(int argc, const char **argv)
     // Our main data storage vessel..
     RASPISTILL_STATE state;
     default_status(&state);
+
     RaspiFastCamClass *cam = new RaspiFastCamClass(state);
     int status = cam->run();
     delete cam;

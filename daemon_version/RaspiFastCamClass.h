@@ -21,7 +21,6 @@ public:
     int run();
 private:
     RASPISTILL_STATE state;
-
 };
 
 #endif //PIPETCAM_RASPIFASTCAMCLASS_H

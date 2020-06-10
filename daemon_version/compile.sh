@@ -7,4 +7,4 @@ LIBDIR="/opt/vc/lib"
 LDFLAGS="$(pkg-config --libs opencv) -lpthread -lmmal -lmmal_core -lmmal_util -lvcos -lbcm_host -Wl,-rpath-link=$LIBDIR"
 CC=g++
 
-$CC $CFLAGS -I$INCDIR -I$EXTRAINCDIR1 -I$EXTRAINCDIR2 -I$EXTRAINCDIR3 -L$LIBDIR RaspiFastCamD.c $LDFLAGS -o raspicam
+$CC $CFLAGS -I$INCDIR -I$EXTRAINCDIR1 -I$EXTRAINCDIR2 -I$EXTRAINCDIR3 -L$LIBDIR RaspiFastCamD.cpp $LDFLAGS -o raspifastcamd
