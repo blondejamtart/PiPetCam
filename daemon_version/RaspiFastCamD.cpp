@@ -59,6 +59,7 @@ int mmal_status_to_int(MMAL_STATUS_T status);
 typedef struct
 {
    FILE *file_handle;                   /// File handle to write buffer data to.
+   void* socket;                        /// 0MQ socket
    VCOS_SEMAPHORE_T complete_semaphore; /// semaphore which is posted when we reach end of frame (indicates end of capture or fault)
    RASPISTILL_STATE *pstate;            /// pointer to our state in case required in callback
 } PORT_USERDATA;
@@ -222,6 +223,74 @@ void image_to_file(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDa
 
 }
 
+void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userData)
+{
+    int complete = 0;
+
+    // We pass our zmq socket handle and other stuff in via the userdata field.
+
+    PORT_USERDATA *pData = (PORT_USERDATA *)userData;
+    if (pData)
+    {
+        int bytes_written = buffer->length;
+
+        if (buffer->length && pData->file_handle)
+        {
+            mmal_buffer_header_mem_lock(buffer);
+
+            /* Create a new message, allocating 6 bytes for message content */
+            zmq_msg_t msg;
+            int rc = zmq_msg_init_size (&msg, buffer->length);
+            if (rc == 0)
+            {
+                /* Send header data */
+                //rc = zmq_send (pData->socket, &part1, ZMQ_SNDMORE);
+                /* Send the message to the socket */
+                memcpy(zmq_msg_data(&msg), buffer->data, buffer->length);
+                rc = zmq_send(pData->socket, &msg, 0);
+            }
+            mmal_buffer_header_mem_unlock(buffer);
+        }
+
+        // We need to check we wrote what we wanted - it's possible we have run out of storage.
+        if (bytes_written != buffer->length)
+        {
+            vcos_log_error("Unable to write buffer to file - aborting");
+            complete = 1;
+        }
+
+        // Now flag if we have completed
+        if (buffer->flags & (MMAL_BUFFER_HEADER_FLAG_FRAME_END | MMAL_BUFFER_HEADER_FLAG_TRANSMISSION_FAILED))
+            complete = 1;
+    }
+    else
+    {
+        vcos_log_error("Received a encoder buffer callback with no state");
+    }
+
+    // release buffer back to the pool
+    mmal_buffer_header_release(buffer);
+
+    // and send one back to the port (if still open)
+    if (port->is_enabled)
+    {
+        MMAL_STATUS_T status;
+        MMAL_BUFFER_HEADER_T *new_buffer;
+
+        new_buffer = mmal_queue_get(pData->pstate->encoder_pool->queue);
+
+        if (new_buffer)
+        {
+            status = mmal_port_send_buffer(port, new_buffer);
+        }
+        if (!new_buffer || status != MMAL_SUCCESS)
+            vcos_log_error("Unable to return a buffer to the encoder port");
+    }
+
+    if (complete)
+        vcos_semaphore_post(&(pData->complete_semaphore));
+
+}
 
 /**
  * Create the camera component, set up its ports
