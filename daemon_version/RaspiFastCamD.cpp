@@ -54,26 +54,6 @@
 
 int mmal_status_to_int(MMAL_STATUS_T status);
 
-/** Structure containing all state information for the current run
- */
-typedef struct
-{
-   int width;                          /// Requested width of image
-   int height;                         /// requested height of image
-   int quality;                        /// JPEG quality setting (1-100)
-   char *filename;                     /// filename of output file
-   int verbose;                        /// !0 if want detailed run information
-   MMAL_FOURCC_T encoding;             /// Encoding to use for the output file.
-
-   MMAL_COMPONENT_T *camera_component;    /// Pointer to the camera component
-   MMAL_COMPONENT_T *encoder_component;   /// Pointer to the encoder component
-   MMAL_CONNECTION_T *preview_connection; /// Pointer to the connection from camera to preview
-   MMAL_CONNECTION_T *encoder_connection; /// Pointer to the connection from camera to encoder
-
-   MMAL_POOL_T *encoder_pool; /// Pointer to the pool of buffers used by encoder output port
-
-} RASPISTILL_STATE;
-
 /** Struct used to pass information in encoder port userdata to callback
  */
 typedef struct
