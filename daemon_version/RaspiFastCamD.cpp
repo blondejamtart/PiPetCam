@@ -29,15 +29,9 @@
 #include "bcm_host.h"
 #include "interface/vcos/vcos.h"
 
-#include "interface/mmal/mmal.h"
-#include "interface/mmal/mmal_logging.h"
-#include "interface/mmal/mmal_buffer.h"
-#include "interface/mmal/util/mmal_util.h"
-#include "interface/mmal/util/mmal_util_params.h"
-#include "interface/mmal/util/mmal_default_components.h"
-#include "interface/mmal/util/mmal_connection.h"
-
 #include <semaphore.h>
+
+#include "RaspiFastCamClass.h"
 
 /// Camera number to use - we only have one camera, indexed from 0.
 #define CAMERA_NUMBER 0
@@ -70,7 +64,7 @@ typedef struct
    char *filename;                     /// filename of output file
    int verbose;                        /// !0 if want detailed run information
    MMAL_FOURCC_T encoding;             /// Encoding to use for the output file.
-   
+
    MMAL_COMPONENT_T *camera_component;    /// Pointer to the camera component
    MMAL_COMPONENT_T *encoder_component;   /// Pointer to the encoder component
    MMAL_CONNECTION_T *preview_connection; /// Pointer to the connection from camera to preview
@@ -88,6 +82,12 @@ typedef struct
    VCOS_SEMAPHORE_T complete_semaphore; /// semaphore which is posted when we reach end of frame (indicates end of capture or fault)
    RASPISTILL_STATE *pstate;            /// pointer to our state in case required in callback
 } PORT_USERDATA;
+
+typedef struct
+{
+    RaspiFastCamClass *instance;
+    void* callbackUserData;
+} CLASS_CALLBACK_DATA;
 
 
 static struct
@@ -160,20 +160,35 @@ static void camera_control_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buf
 /**
  *  buffer header callback function for encoder
  *
- *  Callback will dump buffer data to the specific file
+ *  Callback will call image_callback method on class instance
  *
  * @param port Pointer to port from which callback originated
  * @param buffer mmal buffer header pointer
  */
+
 static void encoder_buffer_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
+{
+    int complete = 0;
+
+    // We pass our file handle and other stuff in via the userdata field.
+
+    CLASS_CALLBACK_DATA *pData = (CLASS_CALLBACK_DATA *)port->userdata;
+
+    if (pData)
+    {
+        pData->instance->image_callback(port, buffer, pData->callbackUserData);
+    }
+
+}
+
+void image_to_file(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userData)
 {
    int complete = 0;
 
    // We pass our file handle and other stuff in via the userdata field.
-
-   PORT_USERDATA *pData = (PORT_USERDATA *)port->userdata;
    // TODO: ZMQ send here
 
+   PORT_USERDATA *pData = (PORT_USERDATA *)userData;
    if (pData)
    {
       int bytes_written = buffer->length;
@@ -563,14 +578,9 @@ static void sigusr1_handler(int signal_number)
 	vcos_semaphore_post(&signal_semaphore);
 }
 
-/**
- * main
- */
-int main(int argc, const char **argv)
-{   
-   // Our main data storage vessel..
-   RASPISTILL_STATE state;
-
+int RaspiFastCamClass::run()
+{
+   RASPISTILL_STATE state = this->state;
    MMAL_STATUS_T status = MMAL_SUCCESS;
    MMAL_PORT_T *camera_preview_port = NULL;
    MMAL_PORT_T *camera_video_port = NULL;
@@ -578,7 +588,6 @@ int main(int argc, const char **argv)
    MMAL_PORT_T *preview_input_port = NULL;
    MMAL_PORT_T *encoder_input_port = NULL;
    MMAL_PORT_T *encoder_output_port = NULL;
-   default_status(&state);
    bcm_host_init();
 
    // Register our application with the logging system
@@ -604,6 +613,7 @@ int main(int argc, const char **argv)
    }
    else
    {
+       // TODO: replace with CLASS_CALLBACK_DATA
       PORT_USERDATA callback_data;
 
       if (state.verbose)
@@ -641,11 +651,12 @@ int main(int argc, const char **argv)
          vcos_status = vcos_semaphore_create(&callback_data.complete_semaphore, "RaspiFastCamD-sem", 0);
 
          vcos_assert(vcos_status == VCOS_SUCCESS);
-			
+
          vcos_status = vcos_semaphore_create(&signal_semaphore, "RaspiFastCamD-signal-sem", 0);
 
          vcos_assert(vcos_status == VCOS_SUCCESS);
-		 
+
+         // TODO: replace with CLASS_CALLBACK_DATA
 		 encoder_output_port->userdata = (struct MMAL_PORT_USERDATA_T *)&callback_data;
 
          if (state.verbose)
@@ -668,7 +679,7 @@ int main(int argc, const char **argv)
 				if (state.verbose)
 					fprintf(stderr, "Waiting for USR1 signal\n");
 				vcos_semaphore_wait(&signal_semaphore);
-				
+
 				if(exit_requested)
 				{
 					if (state.verbose)
@@ -791,4 +802,19 @@ error:
 
    return 0;
 }
+
+/**
+ * main
+ */
+int main(int argc, const char **argv)
+{
+    // Our main data storage vessel..
+    RASPISTILL_STATE state;
+    default_status(&state);
+    RaspiFastCamClass *cam = new RaspiFastCamClass(state);
+    int status = cam->run();
+    delete cam;
+    return status;
+}
+
 
