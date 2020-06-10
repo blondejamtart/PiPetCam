@@ -788,6 +788,11 @@ RaspiFastCamClass::RaspiFastCamClass(RASPISTILL_STATE state)
     this->state = state;
 }
 
+RaspiFastCamClass::~RaspiFastCamClass()
+{
+
+}
+
 /**
  * main
  */
