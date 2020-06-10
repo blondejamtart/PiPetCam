@@ -9,11 +9,11 @@
  *
  * Description
  *
- * This programm is designed to be a fast alternative to raspistill.
+ * This program is designed to be a fast alternative to raspistill.
  * It keeps the connection to the camera open and takes a picture every
- * time a USR1 signal is cought. This should be much fast that an induvidual
+ * time a USR1 signal is caught. This should be much fast that an individual
  * call to raspistill. Additionally the preview component and the exif code
- * is completly removed for additional speedup.
+ * is completely removed for additional speedup.
  */
 
 // We use some GNU extensions (asprintf, basename)
@@ -104,9 +104,9 @@ static struct
 
 static int encoding_xref_size = sizeof(encoding_xref) / sizeof(encoding_xref[0]);
 
-//Semaphore used for communication between signal handler and rest of the programm.
+//Semaphore used for communication between signal handler and rest of the program.
 VCOS_SEMAPHORE_T signal_semaphore;
-//The SIGINT handler will set this to 1, and this will make the programm to exit instead of taking a picture
+//The SIGINT handler will set this to 1, and this will make the program to exit instead of taking a picture
 volatile int exit_requested = 0;
 
 /**
@@ -125,14 +125,14 @@ static void default_status(RASPISTILL_STATE *state)
    state->width = 2592;
    state->height = 1944;
    state->quality = 85;
-   state->filename = "test.jpg";
+   state->filename = "test.bmp";
    state->verbose = 0;
    state->camera_component = NULL;
    state->encoder_component = NULL;
    state->preview_connection = NULL;
    state->encoder_connection = NULL;
    state->encoder_pool = NULL;
-   state->encoding = MMAL_ENCODING_JPEG;
+   state->encoding = MMAL_ENCODING_BMP;
 
 }
 
@@ -172,6 +172,7 @@ static void encoder_buffer_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buf
    // We pass our file handle and other stuff in via the userdata field.
 
    PORT_USERDATA *pData = (PORT_USERDATA *)port->userdata;
+   // TODO: ZMQ send here
 
    if (pData)
    {
@@ -230,7 +231,7 @@ static void encoder_buffer_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buf
 /**
  * Create the camera component, set up its ports
  *
- * @param state Pointer to state control struct. camera_component member set to the created camera_component if successfull.
+ * @param state Pointer to state control struct. camera_component member set to the created camera_component if successful.
  *
  * @return MMAL_SUCCESS if all OK, something else otherwise
  *
@@ -278,7 +279,7 @@ static MMAL_STATUS_T create_camera_component(RASPISTILL_STATE *state)
          { MMAL_PARAMETER_CAMERA_CONFIG, sizeof(cam_config) },
          .max_stills_w = state->width,
          .max_stills_h = state->height,
-         .stills_yuv422 = 0,
+         .stills_yuv422 = 1,
          .one_shot_stills = 1,
          .max_preview_video_w = state->width,
          .max_preview_video_h = state->height,
@@ -439,6 +440,7 @@ static MMAL_STATUS_T create_encoder_component(RASPISTILL_STATE *state)
       goto error;
    }
 
+   /*
    // Set the JPEG quality level
    status = mmal_port_parameter_set_uint32(encoder_output, MMAL_PARAMETER_JPEG_Q_FACTOR, state->quality);
 
@@ -447,7 +449,7 @@ static MMAL_STATUS_T create_encoder_component(RASPISTILL_STATE *state)
       vcos_log_error("Unable to set JPEG quality");
       goto error;
    }
-
+    */
    //  Enable component
    status = mmal_component_enable(encoder);
 
@@ -731,7 +733,7 @@ int main(int argc, const char **argv)
 
                   if (state.verbose)
                      fprintf(stderr, "Starting capture %d\n", frame);
-
+                  // TRIGGERED HERE
                   if (mmal_port_parameter_set_boolean(camera_still_port, MMAL_PARAMETER_CAPTURE, 1) != MMAL_SUCCESS)
                   {
                      vcos_log_error("%s: Failed to start capture", __func__);
