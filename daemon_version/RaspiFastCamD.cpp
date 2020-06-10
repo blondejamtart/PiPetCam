@@ -699,7 +699,7 @@ int RaspiFastCamClass::run()
 						free(use_filename);
 					}
 
-					callback_data.file_handle = output_file;
+					user_callback_data.file_handle = output_file;
 				}
 
 				// We only capture if a filename was specified and it opened
@@ -735,13 +735,13 @@ int RaspiFastCamClass::run()
                      // Wait for capture to complete
                      // For some reason using vcos_semaphore_wait_timeout sometimes returns immediately with bad parameter error
                      // even though it appears to be all correct, so reverting to untimed one until figure out why its erratic
-                     vcos_semaphore_wait(&callback_data.complete_semaphore);
+                     vcos_semaphore_wait(&user_callback_data.complete_semaphore);
                      if (state.verbose)
                         fprintf(stderr, "Finished capture %d\n", frame);
                   }
 
                   // Ensure we don't die if get callback with no open file
-                  callback_data.file_handle = NULL;
+                  user_callback_data.file_handle = NULL;
 
                   if (output_file != stdout)
                      fclose(output_file);
@@ -749,7 +749,7 @@ int RaspiFastCamClass::run()
                frame++;
             } // end for (frame)
 
-            vcos_semaphore_delete(&callback_data.complete_semaphore);
+            vcos_semaphore_delete(&user_callback_data.complete_semaphore);
             vcos_semaphore_delete(&signal_semaphore);
       }
       else
