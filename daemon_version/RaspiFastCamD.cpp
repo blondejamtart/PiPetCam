@@ -20,9 +20,11 @@
 #define _GNU_SOURCE
 
 #include <stdio.h>
+#include <cstdint>
 #include <stdlib.h>
 #include <string.h>
 #include <memory.h>
+#include <math.h>
 
 #define VERSION_STRING "v1.2"
 
@@ -103,10 +105,12 @@ static void default_status(RASPISTILL_STATE *state)
       return;
    }
 
-   state->width = 2592;
-   state->height = 1944;
+   state->width = 640;
+   state->height = 480;
    state->quality = 85;
    state->filename = "test.bmp";
+   state->socket_addr = "tcp://falcon-x399.fritz.box:1515";
+   state->socket_type = ZMQ_PUSH;
    state->verbose = 0;
    state->camera_component = NULL;
    state->encoder_component = NULL;
@@ -167,7 +171,6 @@ void image_to_file(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDa
    int complete = 0;
 
    // We pass our file handle and other stuff in via the userdata field.
-   // TODO: ZMQ send here
 
    PORT_USERDATA *pData = (PORT_USERDATA *)userData;
    if (pData)
@@ -237,26 +240,25 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
         if (buffer->length && pData->file_handle)
         {
             mmal_buffer_header_mem_lock(buffer);
-
-            /* Create a new message, allocating 6 bytes for message content */
+            uint32_t *data_offset = (((char*)(buffer->data)) + 10);
+            int32_t *x, *y;
+            uint16_t *bits;
+            x = (((char*)(buffer->data)) + 18);
+            y = (((char*)(buffer->data)) + 22);
+            bits = (((char*)(buffer->data)) + 28);
+            size_t data_size = ceil((bits * x) / 32.0) * 4;
+            char *img_data = (((char*)(buffer->data)) + *data_offset);
             zmq_msg_t msg;
-            int rc = zmq_msg_init_size (&msg, buffer->length);
+            int rc = zmq_msg_init_size (&msg, data_size);
             if (rc == 0)
             {
                 /* Send header data */
                 //rc = zmq_send (pData->socket, &part1, ZMQ_SNDMORE);
                 /* Send the message to the socket */
-                memcpy(zmq_msg_data(&msg), buffer->data, buffer->length);
+                memcpy(zmq_msg_data(&msg), img_data, data_size);
                 rc = zmq_send(pData->socket, &msg, 0);
             }
             mmal_buffer_header_mem_unlock(buffer);
-        }
-
-        // We need to check we wrote what we wanted - it's possible we have run out of storage.
-        if (bytes_written != buffer->length)
-        {
-            vcos_log_error("Unable to write buffer to file - aborting");
-            complete = 1;
         }
 
         // Now flag if we have completed
