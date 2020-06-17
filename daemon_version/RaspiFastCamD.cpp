@@ -240,14 +240,14 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
         if (buffer->length && pData->file_handle)
         {
             mmal_buffer_header_mem_lock(buffer);
-            uint32_t *data_offset = (((char*)(buffer->data)) + 10);
+            uint32_t *data_offset = static_cast<uint32_t*>((static_cast<char*>(buffer->data)) + 10);
             int32_t *x, *y;
             uint16_t *bits;
-            x = (((char*)(buffer->data)) + 18);
-            y = (((char*)(buffer->data)) + 22);
-            bits = (((char*)(buffer->data)) + 28);
+            x = static_cast<int32_t*>((static_cast<char*>(buffer->data)) + 18);
+            y = static_cast<int32_t*>((static_cast<char*>(buffer->data)) + 22);
+            bits = static_cast<uint16_t*>((static_cast<char*>(buffer->data)) + 28);
             size_t data_size = ceil((bits * x) / 32.0) * 4;
-            char *img_data = (((char*)(buffer->data)) + *data_offset);
+            char *img_data = ((static_cast<char*>(buffer->data)) + *data_offset);
             zmq_msg_t msg;
             int rc = zmq_msg_init_size (&msg, data_size);
             if (rc == 0)
