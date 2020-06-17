@@ -247,7 +247,7 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
             y = reinterpret_cast<int32_t*>((static_cast<unsigned char*>(buffer->data)) + 22);
             bits = reinterpret_cast<uint16_t*>((static_cast<unsigned char*>(buffer->data)) + 28);
             size_t data_size = ceil(((*bits) * (*x)) / 32.0) * 4;
-            char *img_data = ((static_cast<unsigned char*>(buffer->data)) + *data_offset);
+            unsigned char *img_data = ((static_cast<unsigned char*>(buffer->data)) + *data_offset);
             zmq_msg_t msg;
             int rc = zmq_msg_init_size (&msg, data_size);
             if (rc == 0)
