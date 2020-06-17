@@ -110,7 +110,7 @@ static void default_status(RASPISTILL_STATE *state)
    state->quality = 85;
    state->filename = "test.bmp";
    state->socket_addr = "tcp://falcon-x399.fritz.box:1515";
-   state->socket_type = ZMQ_PUSH;
+   //state->socket_type = ZMQ_PUSH;
    state->verbose = 0;
    state->camera_component = NULL;
    state->encoder_component = NULL;

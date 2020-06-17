@@ -5,6 +5,8 @@
 #ifndef PIPETCAM_RASPIFASTCAMCLASS_H
 #define PIPETCAM_RASPIFASTCAMCLASS_H
 
+#include <zmq.h>
+
 #include "interface/mmal/mmal.h"
 #include "interface/mmal/mmal_logging.h"
 #include "interface/mmal/mmal_buffer.h"
@@ -21,6 +23,7 @@ typedef struct
     int height;                         /// requested height of image
     int quality;                        /// JPEG quality setting (1-100)
     char *filename;                     /// filename of output file
+    char *socket_addr;                  /// Address for ZMQ socket
     int verbose;                        /// !0 if want detailed run information
     MMAL_FOURCC_T encoding;             /// Encoding to use for the output file.
 
