@@ -250,22 +250,24 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
             zmq_msg_t headerMsg;
             char header[90];
             bool rc = (zmq_msg_init_size(&headerMsg, 90) == 0);
+            printf("done header alloc\n");
             if (rc)
             {
                 sprintf(header, header_str, 3, x, y, "uint8", uid);
                 memcpy(zmq_msg_data(&headerMsg), header, 90);
                 /* Send header data */
                 rc |= (zmq_send(pData->socket, &headerMsg, 90, ZMQ_SNDMORE) == 0);
-                vcos_log_error("Header sent");
+                printf("Header sent\n");
             }
             zmq_msg_t dataMsg;
-            rc |= (zmq_msg_init_size (&dataMsg, data_size) == 0);
+            rc |= (zmq_msg_init_size(&dataMsg, data_size) == 0);
+            printf("done data alloc\n");
             if (rc)
             {
                 /* Send the message to the socket */
                 memcpy(zmq_msg_data(&dataMsg), img_data, data_size);
                 rc |= (zmq_send(pData->socket, &dataMsg, data_size, 0) == 0);
-                vcos_log_error("Image sent");
+                printf("Image sent\n");
             }
             mmal_buffer_header_mem_unlock(buffer);
         }
