@@ -25,6 +25,7 @@ typedef struct
     int quality;                        /// JPEG quality setting (1-100)
     char *filename;                     /// filename of output file
     char *socket_addr;                  /// Address for ZMQ socket
+    int socket_type;                    /// type of ZMQ socket
     int verbose;                        /// !0 if want detailed run information
     uint32_t exposure;                  /// exposure period (us)
     MMAL_FOURCC_T encoding;             /// Encoding to use for the output file.

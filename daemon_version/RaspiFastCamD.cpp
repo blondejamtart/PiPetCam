@@ -108,9 +108,9 @@ static void default_status(RASPISTILL_STATE *state)
    state->height = 480;
    state->quality = 85;
    state->exposure = 20000;
-   state->filename = "test.bmp";
-   state->socket_addr = "tcp://falcon-x399.fritz.box:1515";
-   //state->socket_type = ZMQ_PUSH;
+   state->filename = "/home/pi/Pictures/test%04d.bmp";
+   state->socket_addr = "tcp://dls-vbox.fritz.box:1515";
+   state->socket_type = ZMQ_PUSH;
    state->verbose = 0;
    state->camera_component = NULL;
    state->encoder_component = NULL;
@@ -732,7 +732,13 @@ int RaspiFastCamClass::run()
 			int frame = 0;
 			FILE *output_file = NULL;
 
-			while(1)
+			void* context = zmq_init(4);
+            void* socket = zmq_socket(context, state.socket_type);
+            int rc = zmq_connect(socket, state.socket_addr);
+            user_callback_data.socket = socket;
+
+            // infinite loop, provided connect succeeded
+			while(rc == 0)
 			{
 				if (state.verbose)
 					fprintf(stderr, "Waiting for USR1 signal\n");
@@ -873,7 +879,7 @@ RaspiFastCamClass::~RaspiFastCamClass()
 
 void RaspiFastCamClass::image_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userData, uint64_t uid)
 {
-    return image_to_file(port, buffer, userData, uid);
+    return image_to_zmq(port, buffer, userData, uid);
 }
 
 /**
