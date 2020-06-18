@@ -44,11 +44,13 @@ class RaspiFastCamClass {
 public:
     RaspiFastCamClass(RASPISTILL_STATE state);
     ~RaspiFastCamClass();
-    virtual void image_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userData);
+    virtual void image_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userData, uint64_t uid);
     int run();
+
+    uint64_t frameCounter;
+
 private:
     RASPISTILL_STATE state;
-    uint64_t frameCounter;
 };
 
 #endif //PIPETCAM_RASPIFASTCAMCLASS_H

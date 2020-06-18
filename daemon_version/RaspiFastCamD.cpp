@@ -251,7 +251,7 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
             bool rc = (zmq_msg_init_size (&headerMsg, 90) == 0);
             if (!rc)
             {
-                sprintf(zmq_msg_data(&headerMsg), header_str, 3, x, y, "uint8", uid);
+                sprintf(static_cast<char*>(zmq_msg_data(&headerMsg)), header_str, 3, x, y, "uint8", uid);
                 /* Send header data */
                 rc |= (zmq_send(pData->socket, &headerMsg, ZMQ_SNDMORE) == 0);
             }
@@ -260,7 +260,7 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
             if (!rc)
             {
                 /* Send the message to the socket */
-                memcpy(zmq_msg_data(&msg), img_data, data_size);
+                memcpy(zmq_msg_data(&dataMsg), img_data, data_size);
                 rc |= (zmq_send(pData->socket, &dataMsg, data_size, 0) == 0);
             }
             mmal_buffer_header_mem_unlock(buffer);
