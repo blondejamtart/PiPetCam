@@ -109,7 +109,7 @@ static void default_status(RASPISTILL_STATE *state)
    state->quality = 85;
    state->exposure = 20000;
    state->filename = "/home/pi/Pictures/test%04d.bmp";
-   state->socket_addr = "tcp://dls-vbox.fritz.box:1515";
+   state->socket_addr = "tcp://falcon-x399.fritz.box:1515";
    state->socket_type = ZMQ_PUSH;
    state->verbose = 0;
    state->camera_component = NULL;
