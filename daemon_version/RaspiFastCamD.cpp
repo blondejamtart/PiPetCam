@@ -244,16 +244,17 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
             auto x = reinterpret_cast<int32_t*>((static_cast<unsigned char*>(buffer->data)) + 18);
             auto y = reinterpret_cast<int32_t*>((static_cast<unsigned char*>(buffer->data)) + 22);
             auto bits = reinterpret_cast<uint16_t*>((static_cast<unsigned char*>(buffer->data)) + 28);
-            size_t data_size = ceil(((*bits) * (*x)) / 32.0) * 4;
+            size_t data_size = ceil(((*bits) * (*x)) / 32.0) * 4 * (*y);
             unsigned char *img_data = ((static_cast<unsigned char*>(buffer->data)) + *data_offset);
 
             zmq_msg_t headerMsg;
-            bool rc = (zmq_msg_init_size(&headerMsg, 90) == 0);
+            bool rc = (zmq_msg_init_size(&headerMsg, 180) == 0);
             if (rc)
             {
                 sprintf(static_cast<char*>(zmq_msg_data(&headerMsg)), header_str, 3, x, y, "uint8", uid);
                 /* Send header data */
-                rc |= (zmq_send(pData->socket, &headerMsg, 90, ZMQ_SNDMORE) == 0);
+                rc |= (zmq_send(pData->socket, &headerMsg, 180, ZMQ_SNDMORE) == 0);
+                vcos_log_error("Header sent");
             }
             zmq_msg_t dataMsg;
             rc |= (zmq_msg_init_size (&dataMsg, data_size) == 0);
@@ -262,6 +263,7 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
                 /* Send the message to the socket */
                 memcpy(zmq_msg_data(&dataMsg), img_data, data_size);
                 rc |= (zmq_send(pData->socket, &dataMsg, data_size, 0) == 0);
+                vcos_log_error("Image sent");
             }
             mmal_buffer_header_mem_unlock(buffer);
         }
