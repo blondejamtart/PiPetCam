@@ -6,6 +6,7 @@
 #define PIPETCAM_RASPIFASTCAMCLASS_H
 
 #include <zmq.h>
+#include <cstdint>
 
 #include "interface/mmal/mmal.h"
 #include "interface/mmal/mmal_logging.h"
@@ -25,6 +26,7 @@ typedef struct
     char *filename;                     /// filename of output file
     char *socket_addr;                  /// Address for ZMQ socket
     int verbose;                        /// !0 if want detailed run information
+    uint32_t exposure;                  /// exposure period (us)
     MMAL_FOURCC_T encoding;             /// Encoding to use for the output file.
 
     MMAL_COMPONENT_T *camera_component;    /// Pointer to the camera component
@@ -36,6 +38,8 @@ typedef struct
 
 } RASPISTILL_STATE;
 
+const char* header_str = "{'htype': ['chunk-1.0'], 'shape': [%d, %d, %d], 'type': %s, 'frame': %d}";
+
 class RaspiFastCamClass {
 public:
     RaspiFastCamClass(RASPISTILL_STATE state);
@@ -44,6 +48,7 @@ public:
     int run();
 private:
     RASPISTILL_STATE state;
+    uint64_t frameCounter;
 };
 
 #endif //PIPETCAM_RASPIFASTCAMCLASS_H

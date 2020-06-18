@@ -20,7 +20,6 @@
 #define _GNU_SOURCE
 
 #include <stdio.h>
-#include <cstdint>
 #include <stdlib.h>
 #include <string.h>
 #include <memory.h>
@@ -108,6 +107,7 @@ static void default_status(RASPISTILL_STATE *state)
    state->width = 640;
    state->height = 480;
    state->quality = 85;
+   state->exposure = 20000;
    state->filename = "test.bmp";
    state->socket_addr = "tcp://falcon-x399.fritz.box:1515";
    //state->socket_type = ZMQ_PUSH;
@@ -161,12 +161,12 @@ static void encoder_buffer_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buf
 
     if (pData)
     {
-        pData->instance->image_callback(port, buffer, pData->callbackUserData);
+        pData->instance->image_callback(port, buffer, pData->callbackUserData, pData->instance->frameCounter);
     }
 
 }
 
-void image_to_file(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userData)
+void image_to_file(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userData, uint64_t uid)
 {
    int complete = 0;
 
@@ -226,7 +226,7 @@ void image_to_file(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDa
 
 }
 
-void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userData)
+void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userData, uint64_t uid)
 {
     int complete = 0;
 
@@ -240,23 +240,28 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
         if (buffer->length && pData->file_handle)
         {
             mmal_buffer_header_mem_lock(buffer);
-            uint32_t *data_offset = reinterpret_cast<uint32_t*>((static_cast<unsigned char*>(buffer->data)) + 10);
-            int32_t *x, *y;
-            uint16_t *bits;
-            x = reinterpret_cast<int32_t*>((static_cast<unsigned char*>(buffer->data)) + 18);
-            y = reinterpret_cast<int32_t*>((static_cast<unsigned char*>(buffer->data)) + 22);
-            bits = reinterpret_cast<uint16_t*>((static_cast<unsigned char*>(buffer->data)) + 28);
+            auto data_offset = reinterpret_cast<uint32_t*>((static_cast<unsigned char*>(buffer->data)) + 10);
+            auto x = reinterpret_cast<int32_t*>((static_cast<unsigned char*>(buffer->data)) + 18);
+            auto y = reinterpret_cast<int32_t*>((static_cast<unsigned char*>(buffer->data)) + 22);
+            auto bits = reinterpret_cast<uint16_t*>((static_cast<unsigned char*>(buffer->data)) + 28);
             size_t data_size = ceil(((*bits) * (*x)) / 32.0) * 4;
             unsigned char *img_data = ((static_cast<unsigned char*>(buffer->data)) + *data_offset);
-            zmq_msg_t msg;
-            int rc = zmq_msg_init_size (&msg, data_size);
-            if (rc == 0)
+
+            zmq_msg_t headerMsg;
+            bool rc = (zmq_msg_init_size (&headerMsg, 90) == 0);
+            if (!rc)
             {
+                sprintf(zmq_msg_data(&headerMsg), header_str, 3, x, y, "uint8", uid);
                 /* Send header data */
-                //rc = zmq_send (pData->socket, &part1, ZMQ_SNDMORE);
+                rc |= (zmq_send(pData->socket, &headerMsg, ZMQ_SNDMORE) == 0);
+            }
+            zmq_msg_t dataMsg;
+            rc |= (zmq_msg_init_size (&dataMsg, data_size) == 0);
+            if (!rc)
+            {
                 /* Send the message to the socket */
                 memcpy(zmq_msg_data(&msg), img_data, data_size);
-                rc = zmq_send(pData->socket, &msg, 0);
+                rc |= (zmq_send(pData->socket, &dataMsg, data_size, 0) == 0);
             }
             mmal_buffer_header_mem_unlock(buffer);
         }
@@ -355,6 +360,7 @@ static MMAL_STATUS_T create_camera_component(RASPISTILL_STATE *state)
          .use_stc_timestamp = MMAL_PARAM_TIMESTAMP_MODE_RESET_STC
       };
       mmal_port_parameter_set(camera->control, &cam_config.hdr);
+      mmal_port_parameter_set_uint32(camera->control, MMAL_PARAMETER_SHUTTER_SPEED, state->exposure);
    }
 
    // Now set up the port formats
@@ -867,7 +873,7 @@ RaspiFastCamClass::~RaspiFastCamClass()
 
 void RaspiFastCamClass::image_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userData)
 {
-    return image_to_file(port, buffer, userData);
+    return image_to_file(port, buffer, userData, frameCounter);
 }
 
 /**
