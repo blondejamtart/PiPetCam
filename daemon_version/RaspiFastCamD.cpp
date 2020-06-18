@@ -248,12 +248,14 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
             unsigned char *img_data = ((static_cast<unsigned char*>(buffer->data)) + *data_offset);
 
             zmq_msg_t headerMsg;
-            bool rc = (zmq_msg_init_size(&headerMsg, 180) == 0);
+            char header[90];
+            bool rc = (zmq_msg_init_size(&headerMsg, 90) == 0);
             if (rc)
             {
-                sprintf(static_cast<char*>(zmq_msg_data(&headerMsg)), header_str, 3, x, y, "uint8", uid);
+                sprintf(header, header_str, 3, x, y, "uint8", uid);
+                memcpy(zmq_msg_data(&headerMsg), header, 90);
                 /* Send header data */
-                rc |= (zmq_send(pData->socket, &headerMsg, 180, ZMQ_SNDMORE) == 0);
+                rc |= (zmq_send(pData->socket, &headerMsg, 90, ZMQ_SNDMORE) == 0);
                 vcos_log_error("Header sent");
             }
             zmq_msg_t dataMsg;
