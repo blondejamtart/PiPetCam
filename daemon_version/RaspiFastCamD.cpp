@@ -248,8 +248,8 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
             unsigned char *img_data = ((static_cast<unsigned char*>(buffer->data)) + *data_offset);
 
             zmq_msg_t headerMsg;
-            bool rc = (zmq_msg_init_size (&headerMsg, 90) == 0);
-            if (!rc)
+            bool rc = (zmq_msg_init_size(&headerMsg, 90) == 0);
+            if (rc)
             {
                 sprintf(static_cast<char*>(zmq_msg_data(&headerMsg)), header_str, 3, x, y, "uint8", uid);
                 /* Send header data */
@@ -257,7 +257,7 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
             }
             zmq_msg_t dataMsg;
             rc |= (zmq_msg_init_size (&dataMsg, data_size) == 0);
-            if (!rc)
+            if (rc)
             {
                 /* Send the message to the socket */
                 memcpy(zmq_msg_data(&dataMsg), img_data, data_size);
