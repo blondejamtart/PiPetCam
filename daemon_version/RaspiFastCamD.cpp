@@ -871,9 +871,9 @@ RaspiFastCamClass::~RaspiFastCamClass()
 
 }
 
-void RaspiFastCamClass::image_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userData)
+void RaspiFastCamClass::image_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userData, uint64_t uid)
 {
-    return image_to_file(port, buffer, userData, frameCounter);
+    return image_to_file(port, buffer, userData, uid);
 }
 
 /**
