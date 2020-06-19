@@ -242,7 +242,7 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
         int bytes_written = buffer->length;
         size_t offset = pData->sent_bytes;
 
-        if (buffer->length && pData->data_message && (pData->sent_bytes == 0 || pData->sent_bytes != pData->total_bytes))
+        if (buffer->length && pData->data_message && (pData->sent_bytes == 0 || pData->sent_bytes < pData->total_bytes))
         {
             mmal_buffer_header_mem_lock(buffer);
             auto buffer_bytes = static_cast<unsigned char*>(buffer->data);
@@ -309,7 +309,8 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
             if (pData->total_bytes > 0 && pData->data_message)
             {
                 printf("sending %d of %d bytes\n", pData->total_bytes, zmq_msg_size(pData->data_message));
-                rc |= (zmq_send(pData->socket, pData->data_message, pData->total_bytes, 0) == 0);
+                int send_rc = zmq_send(pData->socket, pData->data_message, pData->total_bytes, 0);
+                rc |= (send_rc == 0);
                 printf("Image sent\n");
             }
             complete = 1;
