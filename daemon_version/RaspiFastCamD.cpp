@@ -266,8 +266,6 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
                     rc = (zmq_msg_init_size(&headerMsg, 90) == 0);
                     if (rc) {
                         sprintf(static_cast<char*>(zmq_msg_data(&headerMsg)), header_str, 3, *x, *y, "uint8", uid);
-                        printf(static_cast<char*>(zmq_msg_data(&headerMsg)));
-                        printf("\n");
                         /* Send header data */
                         rc |= (zmq_msg_send(&headerMsg, pData->socket, ZMQ_SNDMORE) == 0);
                     }
@@ -296,12 +294,10 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
         // Now flag if we have completed
         if (buffer->flags & (MMAL_BUFFER_HEADER_FLAG_FRAME_END | MMAL_BUFFER_HEADER_FLAG_TRANSMISSION_FAILED))
         {
-            printf("ready to send!\n");
             /* Send the message to the socket */
             if (pData->total_bytes > 0 && pData->data_message)
             {
                 rc |= (zmq_msg_send(pData->data_message, pData->socket, 0) == 0);
-                printf("Image sent\n");
             }
             complete = 1;
         }
@@ -824,7 +820,6 @@ int RaspiFastCamClass::run()
 				    user_callback_data.data_message = new zmq_msg_t;
 				    user_callback_data.total_bytes = 0;
 				    user_callback_data.sent_bytes = 0;
-				    printf("new msg ptr for frame!\n");
                 }
 
 				// We only capture if a filename was specified and it opened
