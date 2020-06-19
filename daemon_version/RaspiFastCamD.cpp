@@ -241,6 +241,7 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
         int rc;
         int bytes_written = buffer->length;
 
+        printf("entered callback\n");
         if (buffer->length && pData->data_message)
         {
             mmal_buffer_header_mem_lock(buffer);
@@ -297,6 +298,10 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
             memcpy((data_ptr + pData->sent_bytes), img_data, data_len);
             pData->sent_bytes += data_len;
             mmal_buffer_header_mem_unlock(buffer);
+        }
+        else
+        {
+            printf("no buffer or zmq_msg\n");
         }
 
         // Now flag if we have completed
