@@ -268,6 +268,7 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
                     printf("done header alloc\n");
                     if (rc) {
                         sprintf(static_cast<char*>(zmq_msg_data(&headerMsg)), header_str, 3, x, y, "uint8", uid);
+                        printf(static_cast<char*>(zmq_msg_data(&headerMsg)));
                         /* Send header data */
                         rc |= (zmq_send(pData->socket, &headerMsg, 90, ZMQ_SNDMORE) == 0);
                         printf("Header sent\n");
