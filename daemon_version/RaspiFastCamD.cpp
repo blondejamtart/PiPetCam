@@ -260,7 +260,7 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
                     img_data  = (buffer_bytes + *data_offset);
                     data_len = buffer->length - *data_offset;
                     pData->total_bytes = ceil(((*bits) * (*x)) / 32.0) * 4 * (*y);
-                    printf("size is %d, offset is %d. buffer is %d\n", data_size, *data_offset, buffer->length);
+                    printf("size is %d, offset is %d. buffer is %d\n", pData->total_bytes, *data_offset, buffer->length);
 
                     zmq_msg_t headerMsg;
                     char header[90];
@@ -299,7 +299,7 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
         if (buffer->flags & (MMAL_BUFFER_HEADER_FLAG_FRAME_END | MMAL_BUFFER_HEADER_FLAG_TRANSMISSION_FAILED))
         {
             /* Send the message to the socket */
-            rc |= (zmq_send(pData->socket, &dataMsg, pData->sent_bytes, 0) == 0);
+            rc |= (zmq_send(pData->socket, &pData->data_message, pData->sent_bytes, 0) == 0);
             printf("Image sent\n");
             complete = 1;
         }
