@@ -61,7 +61,7 @@ typedef struct
 {
    FILE *file_handle;                   /// File handle to write buffer data to.
    void* socket;                        /// 0MQ socket
-   zmq_message_t* data_message;         /// 0MQ message for data
+   zmq_msg_t* data_message;         /// 0MQ message for data
    size_t sent_bytes;                   /// Number of data bytes sent
    size_t total_bytes;                  /// total expected number of bytes
    VCOS_SEMAPHORE_T complete_semaphore; /// semaphore which is posted when we reach end of frame (indicates end of capture or fault)
@@ -238,6 +238,7 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
     PORT_USERDATA *pData = (PORT_USERDATA *)userData;
     if (pData)
     {
+        int rc;
         int bytes_written = buffer->length;
 
         if (buffer->length && pData->data_message)
@@ -248,7 +249,7 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
             auto data_ptr = static_cast<unsigned char*>(zmq_msg_data(pData->data_message));
             size_t data_len;
 
-            if (pData->sent_bytes == 0))
+            if (pData->sent_bytes == 0)
             {
                 if (buffer_bytes[0] == 'B' &&  buffer_bytes[1] == 'M')
                 {
@@ -263,7 +264,7 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
 
                     zmq_msg_t headerMsg;
                     char header[90];
-                    bool rc = (zmq_msg_init_size(&headerMsg, 90) == 0);
+                    rc = (zmq_msg_init_size(&headerMsg, 90) == 0);
                     printf("done header alloc\n");
                     if (rc) {
                         sprintf(header, header_str, 3, x, y, "uint8", uid);
@@ -272,7 +273,7 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
                         rc |= (zmq_send(pData->socket, &headerMsg, 90, ZMQ_SNDMORE) == 0);
                         printf("Header sent\n");
                     }
-                    rc |= (zmq_msg_init_size(pData->data_message, data_size) == 0);
+                    rc |= (zmq_msg_init_size(pData->data_message, pData->total_bytes) == 0);
                     printf("done data alloc\n");
                 }
             }
@@ -818,7 +819,7 @@ int RaspiFastCamClass::run()
 
 				if (state.socket_addr)
                 {
-				    user_callback_data.data_message = new zmq_message_t;
+				    user_callback_data.data_message = new zmq_msg_t;
 				    user_callback_data.sent_bytes = 0;
                 }
 
