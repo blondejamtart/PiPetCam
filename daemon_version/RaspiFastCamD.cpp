@@ -821,6 +821,7 @@ int RaspiFastCamClass::run()
                 {
 				    user_callback_data.data_message = new zmq_msg_t;
 				    user_callback_data.sent_bytes = 0;
+				    printf("new msg ptr for frame!\n");
                 }
 
 				// We only capture if a filename was specified and it opened
