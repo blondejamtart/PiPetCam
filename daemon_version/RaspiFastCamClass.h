@@ -39,7 +39,7 @@ typedef struct
 
 } RASPISTILL_STATE;
 
-const char* header_str = "{'htype': ['chunk-1.0'], 'shape': [%d, %d, %d], 'type': %s, 'frame': %d}";
+const char* header_str = "{\"htype\": [\"chunk-1.0\"], \"shape\": [%d, %d, %d], \"type\": \"%s\", 'frame': %d}";
 
 class RaspiFastCamClass {
 public:
