@@ -309,8 +309,7 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
             if (pData->total_bytes > 0 && pData->data_message)
             {
                 printf("sending %d of %d bytes\n", pData->total_bytes, zmq_msg_size(pData->data_message));
-                int send_rc = zmq_send(pData->socket, pData->data_message, pData->total_bytes, 0);
-                rc |= (send_rc == 0);
+                rc |= (zmq_send(pData->socket, pData->data_message, 100, 0) == 0);
                 printf("Image sent\n");
             }
             complete = 1;
