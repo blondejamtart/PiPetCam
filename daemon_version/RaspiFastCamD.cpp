@@ -770,9 +770,9 @@ int RaspiFastCamClass::run()
             // infinite loop, provided connect succeeded
 			while(rc == 0)
 			{
-				if (state.verbose)
-					fprintf(stderr, "Waiting for USR1 signal\n");
-				vcos_semaphore_wait(&signal_semaphore);
+				//if (state.verbose)
+				//	fprintf(stderr, "Waiting for USR1 signal\n");
+				//vcos_semaphore_wait(&signal_semaphore);
 
 				if(exit_requested)
 				{
