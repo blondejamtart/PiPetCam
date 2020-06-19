@@ -308,6 +308,7 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
             /* Send the message to the socket */
             if (pData->total_bytes > 0 && pData->data_message)
             {
+                printf("sending!\n");
                 rc |= (zmq_send(pData->socket, pData->data_message, pData->total_bytes, 0) == 0);
                 printf("Image sent\n");
             }
@@ -880,8 +881,8 @@ int RaspiFastCamClass::run()
                      fclose(output_file);
                   if (state.socket_addr)
                   {
-                      // delete user_callback_data.data_message;
-                      // user_callback_data.data_message = NULL;
+                      delete user_callback_data.data_message;
+                      user_callback_data.data_message = NULL;
                   }
 
                }
