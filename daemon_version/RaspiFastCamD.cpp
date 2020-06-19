@@ -61,6 +61,9 @@ typedef struct
 {
    FILE *file_handle;                   /// File handle to write buffer data to.
    void* socket;                        /// 0MQ socket
+   zmq_message_t* data_message;         /// 0MQ message for data
+   size_t sent_bytes;                   /// Number of data bytes sent
+   size_t total_bytes;                  /// total expected number of bytes
    VCOS_SEMAPHORE_T complete_semaphore; /// semaphore which is posted when we reach end of frame (indicates end of capture or fault)
    RASPISTILL_STATE *pstate;            /// pointer to our state in case required in callback
 } PORT_USERDATA;
@@ -237,45 +240,68 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
     {
         int bytes_written = buffer->length;
 
-        if (buffer->length && pData->file_handle)
+        if (buffer->length && pData->data_message)
         {
             mmal_buffer_header_mem_lock(buffer);
-            auto data_offset = reinterpret_cast<uint32_t*>((static_cast<unsigned char*>(buffer->data)) + 10);
-            auto x = reinterpret_cast<int32_t*>((static_cast<unsigned char*>(buffer->data)) + 18);
-            auto y = reinterpret_cast<int32_t*>((static_cast<unsigned char*>(buffer->data)) + 22);
-            auto bits = reinterpret_cast<uint16_t*>((static_cast<unsigned char*>(buffer->data)) + 28);
-            size_t data_size = ceil(((*bits) * (*x)) / 32.0) * 4 * (*y);
-            printf("size is %d, offset is %d. buffer is %d\n", data_size, *data_offset, buffer->length);
-            unsigned char *img_data = ((static_cast<unsigned char*>(buffer->data)) + *data_offset);
+            auto buffer_bytes = static_cast<unsigned char*>(buffer->data);
+            unsigned char *img_data;
+            auto data_ptr = static_cast<unsigned char*>(zmq_msg_data(pData->data_message));
+            size_t data_len;
 
-            zmq_msg_t headerMsg;
-            char header[90];
-            bool rc = (zmq_msg_init_size(&headerMsg, 90) == 0);
-            printf("done header alloc\n");
-            if (rc)
+            if (pData->sent_bytes == 0))
             {
-                sprintf(header, header_str, 3, x, y, "uint8", uid);
-                memcpy(zmq_msg_data(&headerMsg), header, 90);
-                /* Send header data */
-                rc |= (zmq_send(pData->socket, &headerMsg, 90, ZMQ_SNDMORE) == 0);
-                printf("Header sent\n");
+                if (buffer_bytes[0] == 'B' &&  buffer_bytes[1] == 'M')
+                {
+                    auto data_offset = reinterpret_cast<uint32_t*>(buffer_bytes + 10);
+                    auto x = reinterpret_cast<int32_t*>(buffer_bytes + 18);
+                    auto y = reinterpret_cast<int32_t*>(buffer_bytes + 22);
+                    auto bits = reinterpret_cast<uint16_t*>(buffer_bytes + 28);
+                    img_data  = (buffer_bytes + *data_offset);
+                    data_len = buffer->length - *data_offset;
+                    pData->total_bytes = ceil(((*bits) * (*x)) / 32.0) * 4 * (*y);
+                    printf("size is %d, offset is %d. buffer is %d\n", data_size, *data_offset, buffer->length);
+
+                    zmq_msg_t headerMsg;
+                    char header[90];
+                    bool rc = (zmq_msg_init_size(&headerMsg, 90) == 0);
+                    printf("done header alloc\n");
+                    if (rc) {
+                        sprintf(header, header_str, 3, x, y, "uint8", uid);
+                        memcpy(zmq_msg_data(&headerMsg), header, 90);
+                        /* Send header data */
+                        rc |= (zmq_send(pData->socket, &headerMsg, 90, ZMQ_SNDMORE) == 0);
+                        printf("Header sent\n");
+                    }
+                    rc |= (zmq_msg_init_size(pData->data_message, data_size) == 0);
+                    printf("done data alloc\n");
+                }
             }
-            zmq_msg_t dataMsg;
-            rc |= (zmq_msg_init_size(&dataMsg, data_size) == 0);
-            printf("done data alloc\n");
-            if (rc)
+            else
             {
-                /* Send the message to the socket */
-                memcpy(zmq_msg_data(&dataMsg), img_data, data_size);
-                rc |= (zmq_send(pData->socket, &dataMsg, data_size, 0) == 0);
-                printf("Image sent\n");
+                img_data = buffer_bytes;
+                if ((pData->sent_bytes + buffer->length) <= pData->total_bytes)
+                {
+                    data_len = buffer->length;
+                }
+                else
+                {
+                    data_len = pData->total_bytes - pData->sent_bytes;
+                }
             }
+            /* copy buffer data into message */
+            memcpy((data_ptr + pData->sent_bytes), img_data, data_len);
+            pData->sent_bytes += data_len;
             mmal_buffer_header_mem_unlock(buffer);
         }
 
         // Now flag if we have completed
         if (buffer->flags & (MMAL_BUFFER_HEADER_FLAG_FRAME_END | MMAL_BUFFER_HEADER_FLAG_TRANSMISSION_FAILED))
+        {
+            /* Send the message to the socket */
+            rc |= (zmq_send(pData->socket, &dataMsg, pData->sent_bytes, 0) == 0);
+            printf("Image sent\n");
             complete = 1;
+        }
     }
     else
     {
@@ -735,8 +761,6 @@ int RaspiFastCamClass::run()
             vcos_log_error("Failed to setup encoder output");
             goto error;
          }
-
-			int frame = 0;
 			FILE *output_file = NULL;
 
 			void* context = zmq_init(4);
@@ -772,7 +796,7 @@ int RaspiFastCamClass::run()
 					{
 						char *use_filename = state.filename;
 
-						asprintf(&use_filename, state.filename, frame);
+						asprintf(&use_filename, state.filename, this->frameCounter);
 
 						if (state.verbose)
 							fprintf(stderr, "Opening output file %s\n", use_filename);
@@ -791,6 +815,12 @@ int RaspiFastCamClass::run()
 
 					user_callback_data.file_handle = output_file;
 				}
+
+				if (state.socket_addr)
+                {
+				    user_callback_data.data_message = new zmq_message_t;
+				    user_callback_data.sent_bytes = 0;
+                }
 
 				// We only capture if a filename was specified and it opened
 				if (output_file)
@@ -814,7 +844,7 @@ int RaspiFastCamClass::run()
                   }
 
                   if (state.verbose)
-                     fprintf(stderr, "Starting capture %d\n", frame);
+                     fprintf(stderr, "Starting capture %d\n", this->frameCounter);
                   // TRIGGERED HERE
                   if (mmal_port_parameter_set_boolean(camera_still_port, MMAL_PARAMETER_CAPTURE, 1) != MMAL_SUCCESS)
                   {
@@ -827,7 +857,7 @@ int RaspiFastCamClass::run()
                      // even though it appears to be all correct, so reverting to untimed one until figure out why its erratic
                      vcos_semaphore_wait(&user_callback_data.complete_semaphore);
                      if (state.verbose)
-                        fprintf(stderr, "Finished capture %d\n", frame);
+                        fprintf(stderr, "Finished capture %d\n", this->frameCounter);
                   }
 
                   // Ensure we don't die if get callback with no open file
@@ -835,8 +865,14 @@ int RaspiFastCamClass::run()
 
                   if (output_file != stdout)
                      fclose(output_file);
+                  if (state.socket_addr)
+                  {
+                      delete user_callback_data.data_message;
+                      user_callback_data.data_message = NULL;
+                  }
+
                }
-               frame++;
+               this->frameCounter++;
             } // end for (frame)
 
             vcos_semaphore_delete(&user_callback_data.complete_semaphore);
