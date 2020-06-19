@@ -880,8 +880,8 @@ int RaspiFastCamClass::run()
                      fclose(output_file);
                   if (state.socket_addr)
                   {
-                      delete user_callback_data.data_message;
-                      user_callback_data.data_message = NULL;
+                      // delete user_callback_data.data_message;
+                      // user_callback_data.data_message = NULL;
                   }
 
                }
