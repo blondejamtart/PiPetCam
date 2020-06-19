@@ -766,7 +766,7 @@ int RaspiFastCamClass::run()
          }
 			FILE *output_file = NULL;
 
-			void* context = zmq_init(0);
+			void* context = zmq_init(4);
             void* socket = zmq_socket(context, state.socket_type);
             int rc = zmq_connect(socket, state.socket_addr);
             user_callback_data.socket = socket;
