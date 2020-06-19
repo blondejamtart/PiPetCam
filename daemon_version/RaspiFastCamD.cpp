@@ -247,7 +247,6 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
             mmal_buffer_header_mem_lock(buffer);
             auto buffer_bytes = static_cast<unsigned char*>(buffer->data);
             unsigned char *img_data;
-            auto data_ptr = static_cast<unsigned char*>(zmq_msg_data(pData->data_message));
             size_t data_len;
 
             if (pData->sent_bytes == 0)
@@ -294,6 +293,7 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
                     printf("No header parsed, skipping!\n");
                 }
             }
+            auto data_ptr = static_cast<unsigned char*>(zmq_msg_data(pData->data_message));
             /* copy buffer data into message */
             memcpy((data_ptr + pData->sent_bytes), img_data, data_len);
             pData->sent_bytes += data_len;
