@@ -108,10 +108,10 @@ static void default_status(RASPISTILL_STATE *state)
    }
 
    state->width = 640;
-   state->height = 32;
+   state->height = 480;
    state->quality = 85;
    state->exposure = 20000;
-   state->filename = "/home/pi/Pictures/test%04d.bmp";
+   state->filename = NULL; //"/home/pi/Pictures/test%04d.bmp";
    state->socket_addr = "tcp://dls-vbox.fritz.box:1515";
    state->socket_type = ZMQ_PUSH;
    state->verbose = 0;
