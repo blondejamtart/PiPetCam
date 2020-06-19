@@ -108,11 +108,11 @@ static void default_status(RASPISTILL_STATE *state)
    }
 
    state->width = 640;
-   state->height = 480;
+   state->height = 32;
    state->quality = 85;
    state->exposure = 20000;
    state->filename = "/home/pi/Pictures/test%04d.bmp";
-   state->socket_addr = "tcp://falcon-x399.fritz.box:1515";
+   state->socket_addr = "tcp://dls-vbox.fritz.box:1515";
    state->socket_type = ZMQ_PUSH;
    state->verbose = 0;
    state->camera_component = NULL;
@@ -382,7 +382,7 @@ static MMAL_STATUS_T create_camera_component(RASPISTILL_STATE *state)
          { MMAL_PARAMETER_CAMERA_CONFIG, sizeof(cam_config) },
          .max_stills_w = state->width,
          .max_stills_h = state->height,
-         .stills_yuv422 = 1,
+         .stills_yuv422 = 0,
          .one_shot_stills = 1,
          .max_preview_video_w = state->width,
          .max_preview_video_h = state->height,
@@ -823,7 +823,7 @@ int RaspiFastCamClass::run()
                 }
 
 				// We only capture if a filename was specified and it opened
-				if (output_file)
+				if (output_file || state.socket_addr)
 				{
                   // Send all the buffers to the encoder output port
                   int num = mmal_queue_length(state.encoder_pool->queue);
@@ -863,7 +863,7 @@ int RaspiFastCamClass::run()
                   // Ensure we don't die if get callback with no open file
                   user_callback_data.file_handle = NULL;
 
-                  if (output_file != stdout)
+                  if (state.filename && output_file != stdout)
                      fclose(output_file);
                   if (state.socket_addr)
                   {
