@@ -241,7 +241,6 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
         int rc;
         int bytes_written = buffer->length;
 
-        printf("entered callback\n");
         if (buffer->length && pData->data_message)
         {
             mmal_buffer_header_mem_lock(buffer);
@@ -267,8 +266,7 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
                     rc = (zmq_msg_init_size(&headerMsg, 90) == 0);
                     printf("done header alloc\n");
                     if (rc) {
-                        sprintf(header, header_str, 3, x, y, "uint8", uid);
-                        memcpy(zmq_msg_data(&headerMsg), header, 90);
+                        sprintf(static_cast<unsigned char*>(zmq_msg_data(&headerMsg)), header_str, 3, x, y, "uint8", uid);
                         /* Send header data */
                         rc |= (zmq_send(pData->socket, &headerMsg, 90, ZMQ_SNDMORE) == 0);
                         printf("Header sent\n");
@@ -295,6 +293,7 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
             }
             auto data_ptr = static_cast<unsigned char*>(zmq_msg_data(pData->data_message));
             /* copy buffer data into message */
+            printf("copying %d of %d bytes into %d of %d\n", data_len, buffer->length, pData->sent_bytes, pData->total_bytes);
             memcpy((data_ptr + pData->sent_bytes), img_data, data_len);
             pData->sent_bytes += data_len;
             mmal_buffer_header_mem_unlock(buffer);
