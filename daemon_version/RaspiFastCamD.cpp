@@ -277,16 +277,20 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
                     printf("done data alloc\n");
                 }
             }
-            else if (pData->total_bytes > 0)
+            else
             {
-                img_data = buffer_bytes;
-                if ((pData->sent_bytes + buffer->length) <= pData->total_bytes)
+                if (pData->total_bytes > 0)
                 {
-                    data_len = buffer->length;
+                    img_data = buffer_bytes;
+                    if ((pData->sent_bytes + buffer->length) <= pData->total_bytes) {
+                        data_len = buffer->length;
+                    } else {
+                        data_len = pData->total_bytes - pData->sent_bytes;
+                    }
                 }
                 else
                 {
-                    data_len = pData->total_bytes - pData->sent_bytes;
+                    printf("No header parsed, skipping!\n");
                 }
             }
             /* copy buffer data into message */
