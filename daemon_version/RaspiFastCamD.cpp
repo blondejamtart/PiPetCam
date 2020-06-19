@@ -260,21 +260,18 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
                     img_data  = (buffer_bytes + *data_offset);
                     data_len = buffer->length - *data_offset;
                     pData->total_bytes = ceil(((*bits) * (*x)) / 32.0) * 4 * (*y);
-                    printf("size is %d, offset is %d. buffer is %d\n", pData->total_bytes, *data_offset, buffer->length);
 
                     zmq_msg_t headerMsg;
                     char header[90];
                     rc = (zmq_msg_init_size(&headerMsg, 90) == 0);
-                    printf("done header alloc\n");
                     if (rc) {
                         sprintf(static_cast<char*>(zmq_msg_data(&headerMsg)), header_str, 3, *x, *y, "'uint8'", uid);
                         printf(static_cast<char*>(zmq_msg_data(&headerMsg)));
+                        printf("\n");
                         /* Send header data */
                         rc |= (zmq_send(pData->socket, &headerMsg, 90, ZMQ_SNDMORE) == 0);
-                        printf("Header sent\n");
                     }
                     rc |= (zmq_msg_init_size(pData->data_message, pData->total_bytes) == 0);
-                    printf("done data alloc\n");
                 }
             }
             else
@@ -288,16 +285,10 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
                         data_len = pData->total_bytes - pData->sent_bytes;
                     }
                 }
-                else
-                {
-                    printf("No header parsed, skipping!\n");
-                }
             }
             auto data_ptr = static_cast<unsigned char*>(zmq_msg_data(pData->data_message));
             /* copy buffer data into message */
-            printf("copying %d of %d bytes into %d of %d\n", data_len, buffer->length, pData->sent_bytes, pData->total_bytes);
             memcpy((data_ptr + offset), img_data, data_len);
-            printf("copy done!\n");
             pData->sent_bytes += data_len;
             mmal_buffer_header_mem_unlock(buffer);
         }
@@ -309,8 +300,7 @@ void image_to_zmq(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer, void *userDat
             /* Send the message to the socket */
             if (pData->total_bytes > 0 && pData->data_message)
             {
-                printf("sending %d of %d bytes\n", pData->total_bytes, zmq_msg_size(pData->data_message));
-                rc |= (zmq_send(pData->socket, pData->data_message, 100, 0) == 0);
+                rc |= (zmq_send(pData->socket, pData->data_message, 65536, 0) == 0);
                 printf("Image sent\n");
             }
             complete = 1;
